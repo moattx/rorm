@@ -1,4 +1,3 @@
-fix head (remove it and just use worm_body?)
-add score (reserve the score's area or make a box?)
-check if worm runs into body part (check_body())
-
+upper case HJKL keys
+cursor head highlight 
+continue moving even if no keys were pressed
