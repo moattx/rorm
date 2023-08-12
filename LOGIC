@@ -1,0 +1,3 @@
+You start off as just the head (@), but if you eat the food (the numbers), new body parts will grow from the front in proportion to the food's amount. When you move the body part that comes after the head, it'll replace the head, and the body parts that come after it will replace the ones that came before.
+
+When you hit the borders, the game ends. When you hit the body parts, the game ends as well. 
