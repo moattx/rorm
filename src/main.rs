@@ -17,7 +17,7 @@ fn main() -> io::Result<()> {
     execute!(stdout, LeaveAlternateScreen)?;
 
     println!(
-        "Well, you ran into something and the game is over.\nYour final score was {}",
+        "\nWell, you ran into something and the game is over.\nYour final score was {}",
         score
     );
     Ok(())

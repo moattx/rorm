@@ -27,6 +27,7 @@ pub struct Game<'a> {
     foody: u16,
     foodx: u16,
     food: u16,
+    upper: bool,
 }
 
 impl<'a> Game<'a> {
@@ -45,18 +46,21 @@ impl<'a> Game<'a> {
             foody: 0,
             foodx: 0,
             food: 0,
+            upper: false,
         }
     }
     pub fn quit(&mut self) {
         self.running = !self.running;
     }
     pub fn display(&mut self) {
+        self.sout.execute(Clear(ClearType::All));
         self.display_worm();
         self.update_food();
         self.display_food();
     }
 
     pub fn update(&mut self) {
+        // check ClearType again
         self.sout.execute(Clear(ClearType::All));
 
         if self.check_borders() {
@@ -121,15 +125,123 @@ impl<'a> Game<'a> {
     }
 
     fn update_worm(&mut self) {
-        let mut egobro = (self.worm_headx, self.worm_heady);
-        for i in 0..self.worm_body.len() {
-            let previous = egobro;
-            egobro = self.worm_body[i];
-            self.worm_body[i] = previous;
+        if self.upper {
+            // assign the first body part with the head's cords - worm_direction and then save the
+            // body part's previous cords
+            // when it goes to the second body part, it'll get the previous body part's new (not
+            // the old) cords and does the same cords calculation cords - worm_direction and etc
+            //
+            // 1. loop through body parts
+            // 2. assign first body part with a var outside the loop that did the calculation first
+            // 3. save the calculation in a var outside loop
+            //
+            // 1. loop
+            // 2. do the calculations with a outside mutable var that has head vars
+            // 3. set the outside var with cords of body part
+            // 4. set body part
+            
+            /*
+            let mut egobrox = self.worm_headx;
+            let mut egobroy = self.worm_heady;
+            */
+            
+            let (mut savex, mut savey) = (self.worm_headx, self.worm_heady);
 
-            if (self.worm_headx, self.worm_heady) == egobro {
-                self.quit();
-                return;
+            for i in 0..self.worm_body.len() {
+/*
+                if (self.worm_direction == Direction::Right || self.worm_direction == Direction::Left && i != 9) || (self.worm_direction == Direction::Up || self.worm_direction == Direction::Down && i != 5){
+                */
+
+                /*
+                let cal = match self.worm_direction {
+                        Direction::Up => {
+                            if i != 5 {
+                            (savex, savey + 1)
+                            }
+                            /*else{
+                            (savex - 1, savey)
+                            }
+                            */
+                        },
+                        Direction::Right => {
+                            if i != 9 {
+                            (savex - 1, savey)
+                            }
+                            //else{
+                            //(savex, savey + 1)
+                            //}
+                        },
+                        Direction::Down => {
+                            if i != 5 {
+                            (savex, savey - 1)
+                            }
+                            //else{
+                            //(savex + 1, savey)
+                            //}
+                        },
+                        Direction::Left => 
+                        {
+                            if i != 9 {
+                                (savex + 1, savey)
+                            }
+                            //else{
+                            //    (savex, savey - 1)
+                            //}
+                        },
+
+                };
+            */
+                /*
+                }else{
+                    let cal = (savex, savey);
+                }
+                */
+
+                //(savex, savey) = self.worm_body[i];
+
+                let cal = match self.worm_direction {
+                        Direction::Up => (savex, savey + 1),
+                        Direction::Right => (savex - 1, savey),
+                        Direction::Down => (savex, savey - 1),
+                        Direction::Left => (savex + 1, savey),
+                };
+
+
+
+                (savex, savey) = cal;
+                self.worm_body[i] = cal;
+
+                /*
+                let (previousx, previousy) = (egobrox, egobroy);
+
+                let (getterx, gettery) = self.worm_body[i];
+
+                let (egobrox, egobroy) = match self.worm_direction {
+                    Direction::Up => (getterx, gettery + 1),
+                    Direction::Right => (getterx - 1, gettery),
+                    Direction::Down => (getterx, gettery - 1),
+                    Direction::Left => (getterx + 1, gettery),
+                };
+                // now previous
+                self.worm_body[i] = (previousx, previousy);
+                */
+
+                if (self.worm_headx, self.worm_heady) == (savex, savey) {
+                    self.quit();
+                    return;
+                }
+            }
+        } else {
+            let mut egobro = (self.worm_headx, self.worm_heady);
+            for i in 0..self.worm_body.len() {
+                let previous = egobro;
+                egobro = self.worm_body[i];
+                self.worm_body[i] = previous;
+
+                if (self.worm_headx, self.worm_heady) == egobro {
+                    self.quit();
+                    return;
+                }
             }
         }
     }
@@ -156,22 +268,57 @@ impl<'a> Game<'a> {
     }
 
     pub fn go_right(&mut self) {
+        self.upper = false;
         self.worm_direction = Direction::Right;
         self.worm_headx = self.worm_headx + 1;
     }
 
     pub fn go_left(&mut self) {
+        self.upper = false;
         self.worm_direction = Direction::Left;
         self.worm_headx = self.worm_headx - 1;
     }
 
     pub fn go_up(&mut self) {
+        self.upper = false;
         self.worm_direction = Direction::Up;
         self.worm_heady = self.worm_heady - 1;
     }
 
     pub fn go_down(&mut self) {
+        self.upper = false;
         self.worm_direction = Direction::Down;
         self.worm_heady = self.worm_heady + 1;
+    }
+
+    pub fn upper_go_right(&mut self) {
+        self.upper = true;
+        self.worm_direction = Direction::Right;
+
+        //https://man.netbsd.org/worm.6
+        self.worm_headx = self.worm_headx + 9;
+    }
+
+    pub fn upper_go_left(&mut self) {
+        self.upper = true;
+        self.worm_direction = Direction::Left;
+
+        // https://man.netbsd.org/worm.6
+        self.worm_headx = self.worm_headx - 9;
+    }
+
+    pub fn upper_go_up(&mut self) {
+        self.upper = true;
+        self.worm_direction = Direction::Up;
+
+        //https://man.netbsd.org/worm.6
+        self.worm_heady = self.worm_heady - 5;
+    }
+
+    pub fn upper_go_down(&mut self) {
+        self.upper = true;
+        self.worm_direction = Direction::Down;
+        //https://man.netbsd.org/worm.6
+        self.worm_heady = self.worm_heady + 5;
     }
 }
