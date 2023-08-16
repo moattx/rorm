@@ -20,12 +20,18 @@ pub fn run(stdout: &io::Stdout) -> std::io::Result<u16> {
         }
 
         // handle terminal events
+        if let Event::Key(keys) = read()? {
+            handle_keys(keys, &mut game)
+        }
+
+        /*
         match read()? {
             // handle key input events
             Event::Key(keys) => handle_keys(keys, &mut game),
             // ignore the rest
             _ => (),
         }
+        */
 
         // clear and update
         game.update();

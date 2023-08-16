@@ -1,4 +1,5 @@
 // game logic
+use std::collections::VecDeque;
 use std::io;
 
 use crossterm::{
@@ -18,7 +19,7 @@ pub struct Game<'a> {
     pub running: bool,
     pub score: u16,
     sout: &'a io::Stdout,
-    worm_body: Vec<(u16, u16)>, //x, y
+    worm_body: VecDeque<(u16, u16)>, //x, y
     worm_headx: u16,
     worm_heady: u16,
     worm_direction: Direction,
@@ -27,59 +28,92 @@ pub struct Game<'a> {
     foody: u16,
     foodx: u16,
     food: u16,
-    upper: bool,
+    upper_move: u16,
 }
 
 impl<'a> Game<'a> {
     pub fn new(stdout: &'a io::Stdout) -> Game<'a> {
+        //let (maxx, maxy) = size().unwrap() as (i32, i32);
         let (maxx, maxy) = size().unwrap();
         Self {
             running: true,
             score: 0,
             sout: stdout,
-            worm_body: Vec::new(),
+            //worm_body: Vec::new(),
+            worm_body: VecDeque::new(),
             worm_headx: maxx / 2,
             worm_heady: maxy / 2,
             worm_direction: Direction::Right,
+            //maxx,
             maxx,
             maxy,
+            //maxy,
             foody: 0,
             foodx: 0,
             food: 0,
-            upper: false,
+            upper_move: 0,
         }
     }
     pub fn quit(&mut self) {
-        self.running = !self.running;
+        self.running = false;
     }
     pub fn display(&mut self) {
         self.sout.execute(Clear(ClearType::All));
+        self.draw_border();
         self.display_worm();
         self.update_food();
         self.display_food();
     }
 
     pub fn update(&mut self) {
-        // check ClearType again
-        self.sout.execute(Clear(ClearType::All));
-
+        if !self.running {
+            return;
+        }
         if self.check_borders() {
             self.quit();
             return;
         }
 
         if self.check_eaten() {
+            self.upper_move = 0;
             self.add_worm_part();
             self.update_score();
             self.update_food();
+            self.display_score();
+            self.display_food();
         }
 
-        self.display_score();
-        self.display_food();
-        // update the worm part's cords
-        self.update_worm();
-        // then display them
         self.display_worm();
+
+        if self.upper_move != 0 {
+            self.upper_move -= 1;
+
+            (self.worm_headx, self.worm_heady) = match self.worm_direction {
+                Direction::Up => (self.worm_headx, self.worm_heady - 1),
+                Direction::Right => (self.worm_headx + 1, self.worm_heady),
+                Direction::Down => (self.worm_headx, self.worm_heady + 1),
+                Direction::Left => (self.worm_headx - 1, self.worm_heady),
+            };
+            self.update();
+        }
+    }
+
+    fn draw_border(&mut self) {
+        for i in 0..self.maxy {
+            self.sout.execute(MoveTo(self.maxx - 2, i)).unwrap();
+            self.sout.execute(Print("|")).unwrap();
+            self.sout.execute(MoveTo(1, i)).unwrap();
+            self.sout.execute(Print("|")).unwrap();
+        }
+
+        for i in 0..(self.maxx - 2) {
+            if i > 1 {
+                self.sout.execute(MoveTo(i, self.maxy)).unwrap();
+                self.sout.execute(Print("-")).unwrap();
+                self.sout.execute(MoveTo(i, 0)).unwrap();
+                self.sout.execute(Print("-")).unwrap();
+            }
+        }
     }
 
     fn check_eaten(&mut self) -> bool {
@@ -94,13 +128,13 @@ impl<'a> Game<'a> {
             Direction::Left => (self.worm_headx + 1, self.worm_heady),
         };
 
-        for _ in 0..=self.food {
-            self.worm_body.push(new_body);
+        for _ in 1..=self.food {
+            self.worm_body.push_front(new_body);
         }
     }
 
     fn update_score(&mut self) {
-        self.score = self.score + self.food;
+        self.score += self.food;
     }
 
     fn display_score(&mut self) {
@@ -112,138 +146,30 @@ impl<'a> Game<'a> {
     }
 
     fn display_worm(&mut self) {
-        // display body parts
-        for (partx, party) in &self.worm_body {
+        if let Some((tailx, taily)) = self.worm_body.back() {
+            self.sout.execute(MoveTo(*tailx, *taily)).unwrap();
+            self.sout.execute(Print(" ")).unwrap();
+        }
+        self.worm_body.pop_back();
+
+        for (partx, party) in self.worm_body.iter() {
             self.sout.execute(MoveTo(*partx, *party)).unwrap();
             self.sout.execute(Print("o")).unwrap();
+            if (self.worm_headx, self.worm_heady) == (*partx, *party) {
+                self.quit();
+                return;
+            }
         }
-        // display head
+
+        self.worm_body
+            .push_front((self.worm_headx, self.worm_heady));
         self.sout
             .execute(MoveTo(self.worm_headx, self.worm_heady))
             .unwrap();
         self.sout.execute(Print("@")).unwrap();
-    }
-
-    fn update_worm(&mut self) {
-        if self.upper {
-            // assign the first body part with the head's cords - worm_direction and then save the
-            // body part's previous cords
-            // when it goes to the second body part, it'll get the previous body part's new (not
-            // the old) cords and does the same cords calculation cords - worm_direction and etc
-            //
-            // 1. loop through body parts
-            // 2. assign first body part with a var outside the loop that did the calculation first
-            // 3. save the calculation in a var outside loop
-            //
-            // 1. loop
-            // 2. do the calculations with a outside mutable var that has head vars
-            // 3. set the outside var with cords of body part
-            // 4. set body part
-            
-            /*
-            let mut egobrox = self.worm_headx;
-            let mut egobroy = self.worm_heady;
-            */
-            
-            let (mut savex, mut savey) = (self.worm_headx, self.worm_heady);
-
-            for i in 0..self.worm_body.len() {
-/*
-                if (self.worm_direction == Direction::Right || self.worm_direction == Direction::Left && i != 9) || (self.worm_direction == Direction::Up || self.worm_direction == Direction::Down && i != 5){
-                */
-
-                /*
-                let cal = match self.worm_direction {
-                        Direction::Up => {
-                            if i != 5 {
-                            (savex, savey + 1)
-                            }
-                            /*else{
-                            (savex - 1, savey)
-                            }
-                            */
-                        },
-                        Direction::Right => {
-                            if i != 9 {
-                            (savex - 1, savey)
-                            }
-                            //else{
-                            //(savex, savey + 1)
-                            //}
-                        },
-                        Direction::Down => {
-                            if i != 5 {
-                            (savex, savey - 1)
-                            }
-                            //else{
-                            //(savex + 1, savey)
-                            //}
-                        },
-                        Direction::Left => 
-                        {
-                            if i != 9 {
-                                (savex + 1, savey)
-                            }
-                            //else{
-                            //    (savex, savey - 1)
-                            //}
-                        },
-
-                };
-            */
-                /*
-                }else{
-                    let cal = (savex, savey);
-                }
-                */
-
-                //(savex, savey) = self.worm_body[i];
-
-                let cal = match self.worm_direction {
-                        Direction::Up => (savex, savey + 1),
-                        Direction::Right => (savex - 1, savey),
-                        Direction::Down => (savex, savey - 1),
-                        Direction::Left => (savex + 1, savey),
-                };
-
-
-
-                (savex, savey) = cal;
-                self.worm_body[i] = cal;
-
-                /*
-                let (previousx, previousy) = (egobrox, egobroy);
-
-                let (getterx, gettery) = self.worm_body[i];
-
-                let (egobrox, egobroy) = match self.worm_direction {
-                    Direction::Up => (getterx, gettery + 1),
-                    Direction::Right => (getterx - 1, gettery),
-                    Direction::Down => (getterx, gettery - 1),
-                    Direction::Left => (getterx + 1, gettery),
-                };
-                // now previous
-                self.worm_body[i] = (previousx, previousy);
-                */
-
-                if (self.worm_headx, self.worm_heady) == (savex, savey) {
-                    self.quit();
-                    return;
-                }
-            }
-        } else {
-            let mut egobro = (self.worm_headx, self.worm_heady);
-            for i in 0..self.worm_body.len() {
-                let previous = egobro;
-                egobro = self.worm_body[i];
-                self.worm_body[i] = previous;
-
-                if (self.worm_headx, self.worm_heady) == egobro {
-                    self.quit();
-                    return;
-                }
-            }
-        }
+        self.sout
+            .execute(MoveTo(self.worm_headx, self.worm_heady))
+            .unwrap();
     }
 
     fn display_food(&mut self) {
@@ -251,9 +177,9 @@ impl<'a> Game<'a> {
         self.sout.execute(Print(self.food)).unwrap();
     }
     fn update_food(&mut self) {
-        let foodx = rand::thread_rng().gen_range(1..(self.maxx - 1));
-        let foody = rand::thread_rng().gen_range(1..(self.maxy - 1));
-        let food = rand::thread_rng().gen_range(1..10);
+        let foodx = rand::thread_rng().gen_range(2..(self.maxx - 2));
+        let foody = rand::thread_rng().gen_range(2..(self.maxy - 2));
+        let food = rand::thread_rng().gen_range(1..9);
 
         self.foodx = foodx;
         self.foody = foody;
@@ -262,63 +188,59 @@ impl<'a> Game<'a> {
 
     fn check_borders(&mut self) -> bool {
         self.worm_heady == (self.maxy - 1)
-            || self.worm_heady == 1
-            || self.worm_headx == (self.maxx - 1)
+            || self.worm_heady == 0
+            || self.worm_headx == (self.maxx - 2)
             || self.worm_headx == 1
     }
 
     pub fn go_right(&mut self) {
-        self.upper = false;
         self.worm_direction = Direction::Right;
-        self.worm_headx = self.worm_headx + 1;
+        self.worm_headx += 1;
     }
 
     pub fn go_left(&mut self) {
-        self.upper = false;
         self.worm_direction = Direction::Left;
-        self.worm_headx = self.worm_headx - 1;
+        self.worm_headx -= 1;
     }
 
     pub fn go_up(&mut self) {
-        self.upper = false;
         self.worm_direction = Direction::Up;
-        self.worm_heady = self.worm_heady - 1;
+        self.worm_heady -= 1;
     }
 
     pub fn go_down(&mut self) {
-        self.upper = false;
         self.worm_direction = Direction::Down;
-        self.worm_heady = self.worm_heady + 1;
+        self.worm_heady += 1;
     }
 
     pub fn upper_go_right(&mut self) {
-        self.upper = true;
+        self.upper_move = 9;
         self.worm_direction = Direction::Right;
 
         //https://man.netbsd.org/worm.6
-        self.worm_headx = self.worm_headx + 9;
+        self.worm_headx += 1;
     }
 
     pub fn upper_go_left(&mut self) {
-        self.upper = true;
+        self.upper_move = 9;
         self.worm_direction = Direction::Left;
 
         // https://man.netbsd.org/worm.6
-        self.worm_headx = self.worm_headx - 9;
+        self.worm_headx -= 1;
     }
 
     pub fn upper_go_up(&mut self) {
-        self.upper = true;
+        self.upper_move = 5;
         self.worm_direction = Direction::Up;
 
         //https://man.netbsd.org/worm.6
-        self.worm_heady = self.worm_heady - 5;
+        self.worm_heady -= 1;
     }
 
     pub fn upper_go_down(&mut self) {
-        self.upper = true;
+        self.upper_move = 5;
         self.worm_direction = Direction::Down;
         //https://man.netbsd.org/worm.6
-        self.worm_heady = self.worm_heady + 5;
+        self.worm_heady += 1;
     }
 }

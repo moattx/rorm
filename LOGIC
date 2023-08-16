@@ -1,3 +1,4 @@
-You start off as just the head (@), but if you eat the food (the numbers), new body parts will grow from the front in proportion to the food's amount. When you move the body part that comes after the head, it'll replace the head, and the body parts that come after it will replace the ones that came before.
+You start off as just the head (@), but if you eat the food (the numbers), new body parts will grow from the front in proportion to the food's amount. When the worm moves, it will follow the direction you set and create a new body part link for the head, then delete the trailing body part. If the length of the body is 8, when the worm moves, it'll first create a new body part for the head in the direction you set, increasing the length to 9, then delete the worm's tail at the end, reducing it back to 8, simulating movement.
 
-When you hit the borders, the game ends. When you hit the body parts, the game ends as well. 
+When you hit the borders, the game ends. When you hit the body parts, the game ends as well.
+
