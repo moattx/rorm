@@ -57,12 +57,13 @@ impl<'a> Game<'a> {
     pub fn quit(&mut self) {
         self.running = false;
     }
-    pub fn display(&mut self) {
-        self.sout.execute(Clear(ClearType::All));
+    pub fn display(&mut self) -> std::io::Result<()> {
+        self.sout.execute(Clear(ClearType::All))?;
         self.draw_border();
         self.display_worm();
         self.update_food();
         self.display_food();
+        Ok(())
     }
 
     pub fn update(&mut self) {
@@ -87,13 +88,7 @@ impl<'a> Game<'a> {
 
         if self.upper_move != 0 {
             self.upper_move -= 1;
-
-            (self.worm_headx, self.worm_heady) = match self.worm_direction {
-                Direction::Up => (self.worm_headx, self.worm_heady - 1),
-                Direction::Right => (self.worm_headx + 1, self.worm_heady),
-                Direction::Down => (self.worm_headx, self.worm_heady + 1),
-                Direction::Left => (self.worm_headx - 1, self.worm_heady),
-            };
+            self.go_forward();
             self.update();
         }
     }
@@ -191,6 +186,15 @@ impl<'a> Game<'a> {
             || self.worm_heady == 0
             || self.worm_headx == (self.maxx - 2)
             || self.worm_headx == 1
+    }
+
+    pub fn go_forward(&mut self) {
+        (self.worm_headx, self.worm_heady) = match self.worm_direction {
+            Direction::Up => (self.worm_headx, self.worm_heady - 1),
+            Direction::Right => (self.worm_headx + 1, self.worm_heady),
+            Direction::Down => (self.worm_headx, self.worm_heady + 1),
+            Direction::Left => (self.worm_headx - 1, self.worm_heady),
+        };
     }
 
     pub fn go_right(&mut self) {

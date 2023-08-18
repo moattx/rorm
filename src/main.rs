@@ -13,6 +13,7 @@ fn main() -> io::Result<()> {
     execute!(stdout, EnterAlternateScreen)?;
 
     let score = gameloop::run(&stdout)?;
+
     disable_raw_mode()?;
     execute!(stdout, LeaveAlternateScreen)?;
 

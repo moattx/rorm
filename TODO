@@ -1,4 +1,2 @@
 define a tuple to represent a point on the grid: type Point = (usize, usize)
 remove worm_headx and worm_heady and only use directions
-continue moving even if no keys were pressed
-fix key quit bug
