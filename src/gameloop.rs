@@ -31,6 +31,7 @@ pub fn run(stdout: &io::Stdout) -> std::io::Result<u16> {
             }
         } else {
             Game::go_forward(&mut game);
+            continue;
         }
 
         // clear and update
