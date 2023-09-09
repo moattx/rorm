@@ -115,7 +115,9 @@ impl<'a> Game<'a> {
     }
 
     fn get_new_head(&mut self) -> Point {
-        let head = self.worm_body.front().unwrap().clone();
+        //let head = self.worm_body.front().unwrap().clone();
+        let head = *self.worm_body.front().unwrap();
+        /*
         let new_head = match self.worm_direction {
             Direction::Up => (head.0, head.1 - 1),
             Direction::Down => (head.0, head.1 + 1),
@@ -123,6 +125,15 @@ impl<'a> Game<'a> {
             Direction::Right => (head.0 + 1, head.1),
         };
         new_head
+        */
+        match self.worm_direction {
+            Direction::Up => (head.0, head.1 - 1),
+            Direction::Down => (head.0, head.1 + 1),
+            Direction::Left => (head.0 - 1, head.1),
+            Direction::Right => (head.0 + 1, head.1),
+        }
+
+
     }
 
     fn draw_border(&mut self) {
@@ -173,10 +184,17 @@ impl<'a> Game<'a> {
         self.worm_body.pop_back();
     }
     fn display_worm(&mut self, new_head: Point) {
+        /*
         for (partx, party) in self.worm_body.iter() {
             self.sout.execute(MoveTo(*partx, *party)).unwrap();
             self.sout.execute(Print("o")).unwrap();
         }
+        */
+
+        self.worm_body.iter().for_each(|part| {
+            self.sout.execute(MoveTo(part.0, part.1)).unwrap();
+            self.sout.execute(Print("o")).unwrap();
+        });
 
         self.worm_body.push_front(new_head);
         self.sout.execute(MoveTo(new_head.0, new_head.1)).unwrap();
